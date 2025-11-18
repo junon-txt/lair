@@ -81,14 +81,10 @@ npm run build
 
 This will:
 1. Run `fetch-decks` to get the latest data
-2. Build the Next.js application
-3. Generate static files in the `.next` directory
+2. Build the Next.js application with static export enabled
+3. Generate static files in the `out/` directory (ready for GitHub Pages)
 
-### Running Production Build
-
-```bash
-npm run start
-```
+**Note**: With `output: 'export'` configured in `next.config.mjs`, Next.js generates a fully static site in the `out/` directory that can be deployed to any static hosting service.
 
 ## 🔧 Technologies Used
 
@@ -124,34 +120,56 @@ lair/
 ## 🔄 How It Works
 
 1. **Data Source**: The app reads from a Google Sheets spreadsheet via CSV export
-2. **Build Time**: The `fetch-decks` script:
-   - Fetches CSV data from Google Sheets
-   - Parses deck information
-   - Downloads all images to `public/deck-images/`
-   - Saves deck metadata to `data/decks.json`
-3. **Runtime**: The Next.js app:
-   - Reads deck data from `data/decks.json`
-   - Serves images from `public/deck-images/`
-   - Provides sorting functionality
+2. **Build Time**: 
+   - The `prebuild` script automatically runs `fetch-decks` which:
+     - Fetches CSV data from Google Sheets
+     - Parses deck information
+     - Downloads all images to `public/deck-images/`
+     - Saves deck metadata to `data/decks.json`
+   - Next.js builds a static site with `output: 'export'` enabled
+   - All static files are generated in the `out/` directory
+3. **Runtime**: The static site:
+   - Serves pre-rendered HTML pages
+   - Includes all deck data and images bundled in the `out/` directory
+   - Provides client-side sorting functionality
    - Renders a responsive grid layout
 
 ## 🚀 Deployment to GitHub Pages
 
+### Automatic Deployment (Recommended)
+
 The project includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that automatically deploys to GitHub Pages on pushes to the `main` branch.
+
+**How it works:**
+1. When you push to the `main` branch, GitHub Actions automatically:
+   - Installs dependencies with `npm ci`
+   - Runs `npm run build` (which automatically runs `fetch-decks` first)
+   - Deploys the `out/` directory to GitHub Pages using `peaceiris/actions-gh-pages`
+
+**Setup:**
+1. Ensure your repository has GitHub Pages enabled in Settings → Pages
+2. Set the source to "GitHub Actions" (not "Deploy from a branch")
+3. Push to the `main` branch to trigger deployment
 
 ### Manual Deployment
 
-1. Build the project:
+If you want to deploy manually:
+
+1. Build the static site:
 ```bash
 npm run build
 ```
 
-2. Export static files:
-```bash
-npm run export
-```
+This generates all static files in the `out/` directory.
 
-3. Deploy the `out` directory to your hosting provider
+2. Deploy the `out/` directory:
+   - **GitHub Pages**: Push the `out/` directory contents to the `gh-pages` branch
+   - **Other hosting**: Upload the contents of the `out/` directory to your hosting provider
+
+**Important Notes:**
+- The `out/` directory contains the complete static site
+- The `.nojekyll` file in `public/` is automatically copied to `out/` to prevent Jekyll processing
+- All images and assets are included in the `out/` directory
 
 ## 📝 Google Sheets Format
 
