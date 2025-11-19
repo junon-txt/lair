@@ -1,8 +1,5 @@
 import * as fs from "fs";
 import * as path from "path";
-import { createWriteStream } from "fs";
-import { pipeline } from "stream/promises";
-import { Readable } from "stream";
 
 const SPREADSHEET_ID = "1l70c7fsk1SFF3swyhdQuxLJqArZuB9pnsJjiI51axOY";
 const SHEET_GID = "0";
@@ -20,50 +17,66 @@ interface Deck {
 }
 
 /**
- * Downloads an image from a URL and saves it locally
+ * Detects image format from file buffer using magic bytes
  */
-async function downloadImage(url: string, filePath: string): Promise<void> {
+function detectImageFormat(buffer: Buffer): string {
+  // Check magic bytes to determine actual image format
+  const bytes = new Uint8Array(buffer);
+  
+  // JPEG: FF D8 FF
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+    return "jpg";
+  }
+  
+  // PNG: 89 50 4E 47
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    return "png";
+  }
+  
+  // GIF: 47 49 46 38
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    return "gif";
+  }
+  
+  // WebP: RIFF...WEBP
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+    // Check for WEBP signature at offset 8
+    if (bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+      return "webp";
+    }
+  }
+  
+  // SVG: Check for XML/HTML declaration (simplified check)
+  const text = buffer.toString('utf-8', 0, Math.min(100, buffer.length));
+  if (text.trim().startsWith('<?xml') || text.trim().startsWith('<svg')) {
+    return "svg";
+  }
+  
+  // Default to jpg if format cannot be determined
+  return "jpg";
+}
+
+/**
+ * Downloads an image from a URL and returns the buffer and detected format
+ */
+async function downloadImage(url: string): Promise<{ buffer: Buffer; extension: string }> {
   try {
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to download image: ${response.statusText} (${response.status})`);
     }
 
-    const buffer = await response.arrayBuffer();
-    await fs.promises.writeFile(filePath, Buffer.from(buffer));
-    console.log(`  ✓ Downloaded: ${path.basename(filePath)}`);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Detect actual image format from content
+    const extension = detectImageFormat(buffer);
+    
+    return { buffer, extension };
   } catch (error) {
     console.error(`  ✗ Error downloading ${url}:`, error);
     throw error;
   }
-}
-
-/**
- * Gets file extension from URL or content type
- */
-async function getImageExtension(url: string): Promise<string> {
-  // Try to get extension from URL first
-  const urlMatch = url.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i);
-  if (urlMatch) {
-    return urlMatch[1].toLowerCase() === "jpeg" ? "jpg" : urlMatch[1].toLowerCase();
-  }
-
-  // Try to get from content type by making a HEAD request
-  try {
-    const response = await fetch(url, { method: "HEAD" });
-    const contentType = response.headers.get("content-type");
-    if (contentType) {
-      const typeMatch = contentType.match(/image\/(jpg|jpeg|png|gif|webp|svg)/i);
-      if (typeMatch) {
-        return typeMatch[1].toLowerCase() === "jpeg" ? "jpg" : typeMatch[1].toLowerCase();
-      }
-    }
-  } catch (error) {
-    // If HEAD request fails, continue with default
-  }
-
-  // Default to jpg
-  return "jpg";
 }
 
 /**
@@ -189,16 +202,17 @@ async function main() {
     console.log(`\n[${i + 1}/${decks.length}] Processing: ${deck.name}`);
 
     try {
-      // Get image extension
-      const extension = await getImageExtension(deck.imageUrl);
+      // Download image and detect actual format
+      const { buffer, extension } = await downloadImage(deck.imageUrl);
 
-      // Create filename from deck name
+      // Create filename from deck name with detected extension
       const filename = `${sanitizeFilename(deck.name)}.${extension}`;
       const imagePath = `/deck-images/${filename}`;
       const filePath = path.join(imagesDir, filename);
 
-      // Download image
-      await downloadImage(deck.imageUrl, filePath);
+      // Save image with correct extension
+      await fs.promises.writeFile(filePath, buffer);
+      console.log(`  ✓ Downloaded: ${path.basename(filePath)} (detected: ${extension})`);
 
       processedDecks.push({
         name: deck.name,
