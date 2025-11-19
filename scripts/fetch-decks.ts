@@ -1,5 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
+import { createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
+import { Readable } from "stream";
 
 const SPREADSHEET_ID = "1l70c7fsk1SFF3swyhdQuxLJqArZuB9pnsJjiI51axOY";
 const SHEET_GID = "0";
@@ -207,7 +210,7 @@ async function main() {
 
       // Create filename from deck name with detected extension
       const filename = `${sanitizeFilename(deck.name)}.${extension}`;
-      const imagePath = `/deck-images/${filename}`;
+      const imagePath = `/lair/deck-images/${filename}`;
       const filePath = path.join(imagesDir, filename);
 
       // Save image with correct extension
