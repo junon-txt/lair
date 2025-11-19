@@ -39,7 +39,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         <header className="flex items-center justify-center gap-4 mb-10 text-white">
           <Image
-            src="/magiclair_logo.webp"
+            src="/lair/magiclair_logo.webp"
             alt="Magic Lair Logo"
             width={0}
             height={0}
