@@ -1,97 +1,25 @@
 import * as fs from "fs";
 import * as path from "path";
-import { createWriteStream } from "fs";
-import { pipeline } from "stream/promises";
-import { Readable } from "stream";
 
 const SPREADSHEET_ID = "1l70c7fsk1SFF3swyhdQuxLJqArZuB9pnsJjiI51axOY";
 const SHEET_GID = "0";
 
 interface DeckData {
   name: string;
+  cardId: string;
   imageUrl: string;
   lastUpdated: string;
+  status: string;
 }
 
 interface Deck {
   name: string;
-  imagePath: string;
+  cardId: string;
+  imageUrl: string;
   lastUpdated: string;
+  status: string;
 }
 
-/**
- * Detects image format from file buffer using magic bytes
- */
-function detectImageFormat(buffer: Buffer): string {
-  // Check magic bytes to determine actual image format
-  const bytes = new Uint8Array(buffer);
-  
-  // JPEG: FF D8 FF
-  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
-    return "jpg";
-  }
-  
-  // PNG: 89 50 4E 47
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
-    return "png";
-  }
-  
-  // GIF: 47 49 46 38
-  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
-    return "gif";
-  }
-  
-  // WebP: RIFF...WEBP
-  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
-    // Check for WEBP signature at offset 8
-    if (bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
-      return "webp";
-    }
-  }
-  
-  // SVG: Check for XML/HTML declaration (simplified check)
-  const text = buffer.toString('utf-8', 0, Math.min(100, buffer.length));
-  if (text.trim().startsWith('<?xml') || text.trim().startsWith('<svg')) {
-    return "svg";
-  }
-  
-  // Default to jpg if format cannot be determined
-  return "jpg";
-}
-
-/**
- * Downloads an image from a URL and returns the buffer and detected format
- */
-async function downloadImage(url: string): Promise<{ buffer: Buffer; extension: string }> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to download image: ${response.statusText} (${response.status})`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    // Detect actual image format from content
-    const extension = detectImageFormat(buffer);
-    
-    return { buffer, extension };
-  } catch (error) {
-    console.error(`  ✗ Error downloading ${url}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Sanitizes a filename
- */
-function sanitizeFilename(name: string): string {
-  return name
-    .replace(/[^a-z0-9]/gi, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .toLowerCase();
-}
 
 /**
  * Fetches and parses deck data from Google Sheets CSV export
@@ -110,6 +38,7 @@ async function fetchDecksFromSheets(): Promise<DeckData[]> {
 
 /**
  * Parses CSV text into DeckData objects
+ * Expected columns: deck_name, card_id, image_url, last_updated_year, last_updated_month, last_updated_day, status
  */
 function parseCSV(csvText: string): DeckData[] {
   const lines = csvText.split("\n").map((line) => line.trim());
@@ -127,15 +56,21 @@ function parseCSV(csvText: string): DeckData[] {
 
     const columns = parseCSVLine(line);
 
-    if (columns.length < 5) continue;
+    // New columns: deck_name, card_id, image_url, last_updated_year, last_updated_month, last_updated_day, status
+    if (columns.length < 7) continue;
 
     const deckName = columns[0]?.trim();
-    const imageUrl = columns[1]?.trim();
-    const year = columns[2]?.trim();
-    const month = columns[3]?.trim();
-    const day = columns[4]?.trim();
+    const cardId = columns[1]?.trim();
+    const imageUrl = columns[2]?.trim(); // This column exists but we'll build from card_id
+    const year = columns[3]?.trim();
+    const month = columns[4]?.trim();
+    const day = columns[5]?.trim();
+    const status = columns[6]?.trim();
 
-    if (!deckName || !imageUrl) continue;
+    if (!deckName || !cardId) continue;
+
+    // Build image URL from card_id
+    const builtImageUrl = `https://images.ygoprodeck.com/images/cards_cropped/${cardId}.jpg`;
 
     let lastUpdated = "";
     if (year && month && day) {
@@ -148,8 +83,10 @@ function parseCSV(csvText: string): DeckData[] {
 
     decks.push({
       name: deckName,
-      imageUrl: imageUrl,
+      cardId: cardId,
+      imageUrl: builtImageUrl,
       lastUpdated: lastUpdated,
+      status: status || "",
     });
   }
 
@@ -182,50 +119,32 @@ function parseCSVLine(line: string): string[] {
 }
 
 /**
- * Main function to fetch decks and download images
+ * Main function to fetch decks and create deck objects
  */
 async function main() {
   console.log("Fetching deck data from Google Sheets...");
   const decks = await fetchDecksFromSheets();
   console.log(`Found ${decks.length} decks`);
 
-  // Create directories
-  const publicDir = path.join(process.cwd(), "public");
-  const imagesDir = path.join(publicDir, "deck-images");
+  // Create data directory (no longer need images directory since we use external URLs)
   const dataDir = path.join(process.cwd(), "data");
-
-  await fs.promises.mkdir(imagesDir, { recursive: true });
   await fs.promises.mkdir(dataDir, { recursive: true });
 
-  // Download images and create deck objects with local paths
+  // Create deck objects (using external image URLs, no downloading needed)
   const processedDecks: Deck[] = [];
 
   for (let i = 0; i < decks.length; i++) {
     const deck = decks[i];
-    console.log(`\n[${i + 1}/${decks.length}] Processing: ${deck.name}`);
+    console.log(`\n[${i + 1}/${decks.length}] Processing: ${deck.name} (${deck.status})`);
 
-    try {
-      // Download image and detect actual format
-      const { buffer, extension } = await downloadImage(deck.imageUrl);
-
-      // Create filename from deck name with detected extension
-      const filename = `${sanitizeFilename(deck.name)}.${extension}`;
-      const imagePath = `/lair/deck-images/${filename}`;
-      const filePath = path.join(imagesDir, filename);
-
-      // Save image with correct extension
-      await fs.promises.writeFile(filePath, buffer);
-      console.log(`  ✓ Downloaded: ${path.basename(filePath)} (detected: ${extension})`);
-
-      processedDecks.push({
-        name: deck.name,
-        imagePath: imagePath,
-        lastUpdated: deck.lastUpdated,
-      });
-    } catch (error) {
-      console.error(`  ✗ Failed to process ${deck.name}:`, error);
-      // Continue with other decks even if one fails
-    }
+    processedDecks.push({
+      name: deck.name,
+      cardId: deck.cardId,
+      imageUrl: deck.imageUrl,
+      lastUpdated: deck.lastUpdated,
+      status: deck.status,
+    });
+    console.log(`  ✓ Added: ${deck.name}`);
   }
 
   // Save deck data as JSON
@@ -237,7 +156,6 @@ async function main() {
   );
 
   console.log(`\n✅ Successfully processed ${processedDecks.length} decks`);
-  console.log(`📁 Images saved to: ${imagesDir}`);
   console.log(`📄 Deck data saved to: ${jsonPath}`);
 }
 
