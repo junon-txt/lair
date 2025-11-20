@@ -28,17 +28,23 @@ export default function Home() {
 
   // Filter out FREE decks and prepare for display
   const activeDecks = useMemo(() => {
-    return decks.filter((deck) => deck.status !== "FREE");
+    return decks.filter((deck) => deck.status?.toUpperCase() !== "FREE");
   }, [decks]);
 
   // Get decks that changed status on the latest date
   const lastChanges = useMemo(() => {
     if (!latestDate) return { free: [], banned: [] };
     
-    const latestDecks = decks.filter((deck) => deck.lastUpdated === latestDate);
+    // Normalize dates for comparison (handle any date format variations)
+    const normalizedLatestDate = latestDate.trim();
+    const latestDecks = decks.filter((deck) => {
+      const deckDate = deck.lastUpdated?.trim();
+      return deckDate === normalizedLatestDate;
+    });
+    
     return {
-      free: latestDecks.filter((deck) => deck.status === "FREE"),
-      banned: latestDecks.filter((deck) => deck.status === "BANNED"),
+      free: latestDecks.filter((deck) => deck.status?.toUpperCase().trim() === "FREE"),
+      banned: latestDecks.filter((deck) => deck.status?.toUpperCase().trim() === "BAN"),
     };
   }, [decks, latestDate]);
 
