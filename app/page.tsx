@@ -11,6 +11,14 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<SortOption>("alphabetical");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Find the latest date among all decks
+  const latestDate = useMemo(() => {
+    if (decks.length === 0) return null;
+    const dates = decks.map((deck) => new Date(deck.lastUpdated).getTime());
+    const maxDate = new Date(Math.max(...dates));
+    return maxDate.toISOString().split("T")[0]; // Return in YYYY-MM-DD format
+  }, [decks]);
+
   const sortedDecks = useMemo(() => {
     // First filter by search query
     let filtered = decks;
@@ -96,7 +104,11 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
             {sortedDecks.map((deck) => (
-              <DeckCard key={deck.name} deck={deck} />
+              <DeckCard 
+                key={deck.name} 
+                deck={deck} 
+                isNew={latestDate !== null && deck.lastUpdated === latestDate}
+              />
             ))}
           </div>
         )}

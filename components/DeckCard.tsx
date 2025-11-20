@@ -5,9 +5,10 @@ import type { Deck } from "@/types/deck";
 
 interface DeckCardProps {
   deck: Deck;
+  isNew?: boolean;
 }
 
-export default function DeckCard({ deck }: DeckCardProps) {
+export default function DeckCard({ deck, isNew = false }: DeckCardProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -41,6 +42,11 @@ export default function DeckCard({ deck }: DeckCardProps) {
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
       <div className="w-full aspect-square relative bg-gray-200 overflow-hidden">
+        {isNew && (
+          <div className="absolute top-2 right-2 bg-yellow-400 text-white text-xs font-bold px-2 py-1 rounded-md z-20">
+            NEW
+          </div>
+        )}
         {imageError ? (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-200 text-gray-400">
             <div className="text-center p-4">
