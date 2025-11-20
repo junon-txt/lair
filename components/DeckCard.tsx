@@ -63,11 +63,11 @@ export default function DeckCard({ deck, isNew = false }: DeckCardProps) {
             )}
             <img
               ref={imgRef}
-              src={deck.imagePath}
+              src={deck.imageUrl}
               alt={deck.name}
               className="w-full h-full object-cover"
               onError={(e) => {
-                console.error("Image failed to load:", deck.imagePath, e);
+                console.error("Image failed to load:", deck.imageUrl, e);
                 setImageError(true);
                 setImageLoaded(false);
               }}

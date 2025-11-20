@@ -7,7 +7,14 @@ import DeckCard from "@/components/DeckCard";
 import decksData from "@/data/decks.json";
 
 export default function Home() {
-  const decks = decksData as Deck[];
+  // Handle both old and new deck formats during migration
+  const decks = (decksData as any[]).map((deck: any) => ({
+    name: deck.name,
+    cardId: deck.cardId || "",
+    imageUrl: deck.imageUrl || deck.imagePath || "",
+    lastUpdated: deck.lastUpdated,
+    status: deck.status || "",
+  })) as Deck[];
   const [sortBy, setSortBy] = useState<SortOption>("alphabetical");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -19,12 +26,28 @@ export default function Home() {
     return maxDate.toISOString().split("T")[0]; // Return in YYYY-MM-DD format
   }, [decks]);
 
+  // Filter out FREE decks and prepare for display
+  const activeDecks = useMemo(() => {
+    return decks.filter((deck) => deck.status !== "FREE");
+  }, [decks]);
+
+  // Get decks that changed status on the latest date
+  const lastChanges = useMemo(() => {
+    if (!latestDate) return { free: [], banned: [] };
+    
+    const latestDecks = decks.filter((deck) => deck.lastUpdated === latestDate);
+    return {
+      free: latestDecks.filter((deck) => deck.status === "FREE"),
+      banned: latestDecks.filter((deck) => deck.status === "BANNED"),
+    };
+  }, [decks, latestDate]);
+
   const sortedDecks = useMemo(() => {
-    // First filter by search query
-    let filtered = decks;
+    // First filter by search query (only active decks)
+    let filtered = activeDecks;
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      filtered = decks.filter((deck) =>
+      filtered = activeDecks.filter((deck) =>
         deck.name.toLowerCase().includes(query)
       );
     }
@@ -40,7 +63,7 @@ export default function Home() {
       );
     }
     return sorted;
-  }, [decks, sortBy, searchQuery]);
+  }, [activeDecks, sortBy, searchQuery]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-purple-600 p-5 md:p-8">
@@ -110,6 +133,44 @@ export default function Home() {
                 isNew={latestDate !== null && deck.lastUpdated === latestDate}
               />
             ))}
+          </div>
+        )}
+
+        {/* LAST CHANGES Section */}
+        {(lastChanges.free.length > 0 || lastChanges.banned.length > 0) && (
+          <div className="mt-12">
+            <h2 className="text-3xl font-bold text-white mb-6 text-center drop-shadow-lg">
+              Last Changes
+            </h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* FREE Decks Column */}
+              {lastChanges.free.length > 0 && (
+                <div className="bg-white rounded-lg p-6 shadow-lg">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">
+                    Now Free
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {lastChanges.free.map((deck) => (
+                      <DeckCard key={deck.name} deck={deck} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* BANNED Decks Column */}
+              {lastChanges.banned.length > 0 && (
+                <div className="bg-white rounded-lg p-6 shadow-lg">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">
+                    Now Banned
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {lastChanges.banned.map((deck) => (
+                      <DeckCard key={deck.name} deck={deck} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
