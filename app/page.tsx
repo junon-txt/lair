@@ -8,7 +8,11 @@ import decksData from "@/data/decks.json";
 
 const BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH || '/lair').replace(/\/$/, '');
 
+type Tab = "hotu" | "empty";
+
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<Tab>("hotu");
+  
   // Handle both old and new deck formats during migration
   const decks = (decksData as any[]).map((deck: any) => ({
     name: deck.name,
@@ -93,13 +97,39 @@ export default function Home() {
             <h1 className="text-4xl md:text-5xl font-bold mb-2 drop-shadow-lg">
               Magic Lair
             </h1>
-            <p className="text-lg md:text-xl opacity-90">
-              HOTU banlist
-            </p>
           </div>
         </header>
 
-        <div className="mb-8 bg-white rounded-lg p-4 shadow-lg flex flex-col sm:flex-row gap-4 items-end">
+        {/* Tab Navigation */}
+        <div className="mb-6 bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab("hotu")}
+              className={`flex-1 px-6 py-4 text-lg font-semibold transition-colors ${
+                activeTab === "hotu"
+                  ? "bg-indigo-500 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              HOTU Banlist
+            </button>
+            <button
+              onClick={() => setActiveTab("empty")}
+              className={`flex-1 px-6 py-4 text-lg font-semibold transition-colors ${
+                activeTab === "empty"
+                  ? "bg-indigo-500 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              EMPTY
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === "hotu" && (
+          <div>
+            <div className="mb-8 bg-white rounded-lg p-4 shadow-lg flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-1 w-full">
             <label htmlFor="search-input" className="block font-semibold text-gray-800 mb-2">
               Search decks:
@@ -183,6 +213,14 @@ export default function Home() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+          </div>
+        )}
+
+        {activeTab === "empty" && (
+          <div className="bg-white rounded-lg p-12 shadow-lg text-center">
+            <p className="text-gray-500 text-lg">This tab is empty</p>
           </div>
         )}
       </div>
