@@ -6,6 +6,8 @@ import type { Deck, SortOption } from "@/types/deck";
 import DeckCard from "@/components/DeckCard";
 import decksData from "@/data/decks.json";
 
+const BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH || '/lair').replace(/\/$/, '');
+
 export default function Home() {
   // Handle both old and new deck formats during migration
   const decks = (decksData as any[]).map((deck: any) => ({
@@ -80,7 +82,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         <header className="flex items-center justify-center gap-4 mb-10 text-white">
           <Image
-            src="/lair/magiclair_logo.webp"
+            src={`${BASE_PATH}/magiclair_logo.webp`}
             alt="Magic Lair Logo"
             width={0}
             height={0}

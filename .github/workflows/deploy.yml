@@ -14,6 +14,8 @@ jobs:
         node-version: 20.x
     - run: npm ci
     - run: npm run build
+      env:
+        NEXT_PUBLIC_BASE_PATH: /lair
     - uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}

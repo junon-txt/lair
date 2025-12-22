@@ -8,6 +8,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "serve": "npx serve@latest out -p 3000",
+    "serve:local": "NEXT_PUBLIC_BASE_PATH= npm run build && npx serve@latest out -p 3000",
+    "serve:python": "cd out && python3 -m http.server 3000",
     "lint": "next lint"
   },
   "dependencies": {

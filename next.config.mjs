@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined 
+  ? process.env.NEXT_PUBLIC_BASE_PATH 
+  : '/lair';
+
 const nextConfig = {
   output: 'export',
-  basePath: '/lair',
+  basePath: basePath,
   images: {
     unoptimized: true,
   },
