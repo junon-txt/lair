@@ -148,7 +148,7 @@ export default function Home() {
             <h2 className="text-3xl font-bold text-white mb-6 text-center drop-shadow-lg">
               Last Changes
             </h2>
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className={`grid gap-6 ${lastChanges.free.length > 0 && lastChanges.banned.length > 0 ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
               {/* FREE Decks Column */}
               {lastChanges.free.length > 0 && (
                 <div className="bg-white rounded-lg p-6 shadow-lg">
