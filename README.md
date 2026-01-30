@@ -1,4 +1,4 @@
-# Magic Lair
+# Magic Lair 
 
 A static web application for displaying Yu-Gi-Oh! deck collections. The app automatically fetches deck data from a Google Sheets spreadsheet and displays them with images, names, and last updated dates. Images are downloaded at build time and served statically for optimal performance.
 
